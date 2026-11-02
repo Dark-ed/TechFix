@@ -1,14 +1,23 @@
-# dependencies
+# Dependencies
 node_modules/
 
-# environment variables
+# Environment variables and secrets
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
 
-# logs
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Editor files
+.vscode/
+.idea/

@@ -1,59 +1,309 @@
-// services/executor.js
-import { run } from '../utils/shell.js';
-import * as snapshot from './snapshot.js';
-import * as audit from './audit.js';
-import fs from 'fs';
-import path from 'path';
+import { run } from "../utils/shell.js";
+import { log } from "./audit.js";
+import { checkDhcpConfiguration } from "./diagnostics.js";
+
+
+// ==========================================
+// DNS CACHE RECOVERY
+// ==========================================
+
+export async function flushDnsCache() {
+
+    if (process.platform !== "win32") {
+
+        throw new Error(
+            "DNS cache flushing is currently supported only on Windows."
+        );
+    }
+
+    console.log("[Recovery] Starting DNS cache flush.");
+
+    const execution = await run(
+        "ipconfig /flushdns",
+        {
+            timeoutMs: 10000
+        }
+    );
+
+    const success = execution?.code === 0;
+
+    if (!success) {
+
+        throw new Error(
+            execution?.stderr ||
+            execution?.stdout ||
+            "Windows DNS cache flushing failed."
+        );
+    }
+
+    // Verify DNS lookup after flushing.
+    let verification;
+
+    try {
+
+        verification = await run(
+            "nslookup example.com",
+            {
+                timeoutMs: 10000,
+                ignoreExitCode: true
+            }
+        );
+
+    } catch (error) {
+
+        verification = {
+            attempted: true,
+            error: error.message
+        };
+    }
+
+    // Record the recovery action.
+    try {
+
+        await log("recovery:dns_cache_flush", {
+            success: true,
+            verificationAttempted: true,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+
+        console.error(
+            "[Recovery] Audit logging failed:",
+            error.message
+        );
+    }
+
+    console.log(
+        "[Recovery] DNS cache flushed successfully."
+    );
+
+    return {
+
+        success: true,
+
+        action: "flush_dns_cache",
+
+        message: "Windows DNS resolver cache was flushed.",
+
+        output: execution.stdout || "",
+
+        verification,
+
+        note:
+            "A DNS lookup was attempted after the flush. " +
+            "Successful DNS resolution does not by itself prove " +
+            "that the original network problem is completely fixed."
+    };
+}
+
+
+// ==========================================
+// DHCP LEASE RENEWAL
+// ==========================================
+
+export async function renewDhcpLease() {
+
+    if (process.platform !== "win32") {
+
+        throw new Error(
+            "DHCP lease renewal is currently supported only on Windows."
+        );
+    }
+
+    console.log(
+        "[Recovery] Starting approved DHCP lease renewal."
+    );
+
+    // Fixed command only.
+    // No user or AI supplied arguments are accepted.
+    // The existing lease is not released first.
+
+    const execution = await run(
+        "ipconfig /renew",
+        {
+            timeoutMs: 45000,
+            ignoreExitCode: true
+        }
+    );
+
+    if (execution?.code !== 0) {
+
+        throw new Error(
+            execution?.stderr ||
+            execution?.stdout ||
+            "Windows DHCP lease renewal failed."
+        );
+    }
+
+    // Verify DHCP configuration after renewal.
+
+    let verification;
+
+    try {
+
+        verification = await checkDhcpConfiguration();
+
+    } catch (error) {
+
+        verification = {
+            supported: false,
+            state: "verification_failed",
+            error: error.message
+        };
+    }
+
+    // Record sanitized verification information.
+
+    try {
+
+        await log("recovery:dhcp_lease_renewal", {
+
+            commandCompleted: true,
+
+            verificationSupported:
+                Boolean(verification?.supported),
+
+            state:
+                verification?.state || "unknown",
+
+            recommendationEligible:
+                Boolean(
+                    verification?.recommendationEligible
+                ),
+
+            timestamp: new Date().toISOString()
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "[Recovery] Audit logging failed:",
+            error.message
+        );
+    }
+
+    const verifiedHealthy =
+        verification?.supported === true &&
+        verification?.state === "healthy";
+
+    const stillNeedsRenewal =
+        verification?.supported === true &&
+        verification?.recommendationEligible === true;
+
+    let note;
+
+    if (verifiedHealthy) {
+
+        note =
+            "The post-renewal check found usable IPv4 configuration " +
+            "on connected DHCP-enabled adapters. This does not guarantee " +
+            "that every website or application is reachable.";
+
+    } else if (stillNeedsRenewal) {
+
+        note =
+            "The renewal command completed, but a connected DHCP-enabled " +
+            "adapter still appears to lack a usable IPv4 address. " +
+            "The network may require further investigation.";
+
+    } else {
+
+        note =
+            "The renewal command completed, but the DHCP state could not " +
+            "be fully verified. Check the network connection if the issue remains.";
+    }
+
+    console.log(
+        "[Recovery] DHCP lease renewal command completed."
+    );
+
+    return {
+
+        success: true,
+
+        action: "renew_dhcp_lease",
+
+        message:
+            "Windows DHCP lease renewal command completed.",
+
+        output: execution.stdout || "",
+
+        verification: {
+
+            supported:
+                Boolean(verification?.supported),
+
+            state:
+                verification?.state || "unknown",
+
+            dhcpEnabledAdapterCount:
+                verification?.dhcpEnabledAdapterCount ?? null,
+
+            connectedDhcpAdapterCount:
+                verification?.connectedDhcpAdapterCount ?? null,
+
+            apipaAdapterCount:
+                verification?.apipaAdapterCount ?? null,
+
+            missingIpv4AdapterCount:
+                verification?.missingIpv4AdapterCount ?? null,
+
+            recommendationEligible:
+                verification?.recommendationEligible ?? null,
+
+            verifiedHealthy
+        },
+
+        note
+    };
+}
+
+
+// ==========================================
+// DISABLED SYSTEM-CHANGING ACTIONS
+// ==========================================
 
 async function upgradeNode() {
-  const snapId = await snapshot.capture('node_upgrade', { files: [], note: 'Pre Node upgrade' });
-  const plan = {
-    steps: [
-      'Install Node 20 via nvm or official installer',
-      'Set default to Node 20',
-      'Verify node -v'
-    ],
-    commands: process.platform === 'win32'
-      ? ['winget install OpenJS.NodeJS.LTS', 'refreshenv', 'node -v']
-      : ['bash -lc "source ~/.nvm/nvm.sh && nvm install 20 && nvm alias default 20"', 'node -v']
-  };
-  await audit.log('executor:upgrade_node', { snapId, plan, dryRun: true });
-  return { snapId, plan, requiresManualConfirm: true };
+
+    throw new Error(
+        "Node.js upgrades are disabled pending a secure recovery workflow."
+    );
 }
 
-async function freePort(port) {
-  const snapId = await snapshot.capture('port_free', { note: `Attempt free port ${port}` });
-  const cmd = process.platform === 'win32'
-    ? `for /f "tokens=5" %a in ('netstat -ano ^| findstr :${port}') do taskkill /PID %a /F`
-    : `lsof -ti :${port} | xargs -r kill -9`;
-  await audit.log('executor:free_port', { snapId, port, cmd });
-  const res = await run(cmd, { shell: true });
-  return { snapId, port, output: res.stdout };
+
+async function freePort() {
+
+    throw new Error(
+        "Automatic process termination is disabled for security."
+    );
 }
 
-async function openFirewall(port = 5000) {
-  const snapId = await snapshot.capture('firewall_open', { note: `Open firewall for port ${port}` });
-  const cmd = process.platform === 'win32'
-    ? `powershell -Command "New-NetFirewallRule -DisplayName 'AgentPort${port}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port}"`
-    : `sudo ufw allow ${port}/tcp`;
-  await audit.log('executor:open_firewall', { snapId, port, cmd });
-  const res = await run(cmd, { shell: true });
-  return { snapId, port, output: res.stdout || res.stderr };
+
+async function openFirewall() {
+
+    throw new Error(
+        "Automatic firewall modification is disabled for security."
+    );
 }
 
-async function setEnv(updates = {}) {
-  const snapId = await snapshot.capture('env_update', { note: 'Set missing env vars', data: Object.keys(updates) });
-  const envPath = path.join(process.cwd(), '.env');
-  const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
-  const lines = existing.split('\n').filter(Boolean);
-  const kv = Object.fromEntries(lines.map(l => l.split('=')));
-  for (const [k, v] of Object.entries(updates)) {
-    if (!kv[k]) kv[k] = v;
-  }
-  const rendered = Object.entries(kv).map(([k, v]) => `${k}=${v}`).join('\n');
-  fs.writeFileSync(envPath, rendered);
-  await audit.log('executor:set_env', { snapId, updated: Object.keys(updates) });
-  return { snapId, updated: Object.keys(updates) };
+
+async function setEnv() {
+
+    throw new Error(
+        "Automatic environment-variable modification is disabled."
+    );
 }
 
-export { upgradeNode, freePort, openFirewall, setEnv };
+
+// ==========================================
+// EXPORTS
+// ==========================================
+
+export {
+    upgradeNode,
+    freePort,
+    openFirewall,
+    setEnv
+};

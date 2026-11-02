@@ -1,24 +1,347 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>TechFix Agent</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>TechFix AI</h1>
-      <p>Autonomous Troubleshooting Agent</p>
-    </header>
-    <main id="chatBox" class="chat-box"></main>
-    <form id="chatForm" class="chat-input">
-      <input id="userInput" placeholder="Describe your issue..." autocomplete="off"/>
-      <button type="submit">Send</button>
-    </form>
-  </div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="app.js"></script>
+    <title>TechFix AI | Troubleshooting Agent</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/recovery.css">
+    <script src="/recovery.js" defer></script>
+    <link rel="stylesheet" href="/network-health.css">
+    <script src="/network-health.js?v=1" defer></script>
+    <script src="app.js" defer></script>
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">T</div>
+
+            <div>
+                <h2>TechFix<span>AI</span></h2>
+                <p>INTELLIGENT SUPPORT</p>
+            </div>
+        </div>
+
+        <div class="sidebar-label">WORKSPACE</div>
+
+        <button class="nav-item active" id="homeButton">
+            <span>◈</span>
+            Agent Workspace
+        </button>
+
+        <div class="sidebar-label">QUICK ACCESS</div>
+
+        <button class="nav-item" data-action="diagnostics">
+            <span>⌘</span>
+            System Diagnostics
+        </button>
+
+        <button class="nav-item" data-action="ping">
+            <span>⌁</span>
+            Network Testing
+        </button>
+
+        <button class="nav-item" data-action="nslookup">
+            <span>◎</span>
+            DNS Lookup
+        </button>
+
+        <div class="sidebar-bottom">
+            <div class="sidebar-status">
+                <span class="status-dot" id="sidebarDot"></span>
+
+                <div>
+                    <strong id="sidebarStatus">Connecting...</strong>
+                    <small>Backend connection</small>
+                </div>
+            </div>
+
+            <p class="sidebar-version">TECHFIX AI · LOCAL AGENT</p>
+        </div>
+
+    </aside>
+
+
+    <!-- Main workspace -->
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+                <p class="eyebrow">AI TROUBLESHOOTING PLATFORM</p>
+                <h1>Agent Workspace</h1>
+            </div>
+
+            <div class="connection-badge">
+                <span class="status-dot" id="headerDot"></span>
+                <span id="headerStatus">Checking backend</span>
+            </div>
+
+        </header>
+
+
+        <!-- Welcome section -->
+        <section class="welcome-section">
+
+            <div class="welcome-content">
+
+                <div class="agent-avatar">
+                    <span>✳</span>
+                </div>
+
+                <div>
+                    <div class="welcome-label">
+                        YOUR TECHNICAL ASSISTANT
+                    </div>
+
+                    <h2>What can I help you <span>fix today?</span></h2>
+
+                    <p>
+                        Describe a technical issue. I'll prepare a troubleshooting
+                        plan and help you investigate it step by step.
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="agent-badge">
+                <span class="pulse-dot"></span>
+                AGENT READY
+            </div>
+
+        </section>
+
+
+        <!-- Action cards -->
+        <section class="tools-section">
+
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">AVAILABLE TOOLS</p>
+                    <h2>Diagnostic Actions</h2>
+                </div>
+
+                <span class="section-count">04 TOOLS</span>
+            </div>
+
+
+            <div class="tools-grid">
+
+                <button class="tool-card" data-action="ping">
+
+                    <div class="tool-top">
+                        <div class="tool-icon blue">⌁</div>
+                        <span class="tool-arrow">↗</span>
+                    </div>
+
+                    <h3>Network Ping</h3>
+
+                    <p>
+                        Test connectivity to a network host and inspect
+                        the response.
+                    </p>
+
+                    <div class="tool-footer">
+                        <span class="mini-dot"></span>
+                        Network utility
+                    </div>
+
+                </button>
+
+
+                <button class="tool-card" data-action="tasklist">
+
+                    <div class="tool-top">
+                        <div class="tool-icon purple">▤</div>
+                        <span class="tool-arrow">↗</span>
+                    </div>
+
+                    <h3>Process Monitor</h3>
+
+                    <p>
+                        Inspect running processes on your Windows system.
+                    </p>
+
+                    <div class="tool-footer">
+                        <span class="mini-dot"></span>
+                        System utility
+                    </div>
+
+                </button>
+
+
+                <button class="tool-card" data-action="nslookup">
+
+                    <div class="tool-top">
+                        <div class="tool-icon green">◎</div>
+                        <span class="tool-arrow">↗</span>
+                    </div>
+
+                    <h3>DNS Lookup</h3>
+
+                    <p>
+                        Check whether a domain name resolves through DNS.
+                    </p>
+
+                    <div class="tool-footer">
+                        <span class="mini-dot"></span>
+                        DNS utility
+                    </div>
+
+                </button>
+
+
+                <button class="tool-card featured-card" data-action="diagnostics">
+
+                    <div class="tool-top">
+                        <div class="tool-icon orange">⌘</div>
+                        <span class="tool-arrow">↗</span>
+                    </div>
+
+                    <h3>System Diagnostics</h3>
+
+                    <p>
+                        Run your diagnostic suite and inspect reported issues.
+                    </p>
+
+                    <div class="tool-footer">
+                        <span class="mini-dot"></span>
+                        Diagnostic engine
+                    </div>
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- Chat and results -->
+        <section class="workspace-grid">
+
+
+            <!-- Chat -->
+            <div class="panel chat-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <p class="eyebrow">INTERACTIVE ASSISTANT</p>
+                        <h2>Talk to TechFix</h2>
+                    </div>
+
+                    <span class="live-label">LIVE</span>
+
+                </div>
+
+
+                <div id="chatBox" class="chat-box" aria-live="polite">
+
+                    <div class="message assistant-message">
+
+                        <div class="message-avatar">T</div>
+
+                        <div class="message-content">
+                            <div class="message-author">TechFix AI</div>
+
+                            <div class="message-bubble">
+                                Hello! Describe the technical problem you're
+                                experiencing. I'll prepare a troubleshooting
+                                plan for you to review.
+                            </div>
+
+                            <div class="message-time">Ready to assist</div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <form id="chatForm" class="chat-input">
+
+                    <input
+                        id="userInput"
+                        type="text"
+                        placeholder="Describe your technical issue..."
+                        autocomplete="off"
+                        required
+                    >
+
+                    <button id="sendButton" type="submit">
+                        <span>Send</span>
+                        <span>↑</span>
+                    </button>
+
+                </form>
+
+                <p class="input-note">
+                    Review proposed actions before approving execution.
+                </p>
+
+            </div>
+
+
+            <!-- Results -->
+            <div class="panel results-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <p class="eyebrow">EXECUTION OUTPUT</p>
+                        <h2>Agent Results</h2>
+                    </div>
+
+                    <button id="clearResults" class="clear-button">
+                        Clear
+                    </button>
+
+                </div>
+
+
+                <div id="resultsBox" class="results-box">
+
+                    <div class="empty-state">
+
+                        <div class="empty-icon">{ }</div>
+
+                        <h3>Awaiting execution</h3>
+
+                        <p>
+                            Diagnostic results and tool responses will appear
+                            here after an action runs.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="results-footer">
+                    <span class="mini-dot"></span>
+                    <span id="resultStatus">No actions executed</span>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <footer class="main-footer">
+            <span>TECHFIX AI</span>
+            <span>AI-ASSISTED TROUBLESHOOTING</span>
+        </footer>
+
+    </main>
+
+</div>
+
 </body>
 </html>
