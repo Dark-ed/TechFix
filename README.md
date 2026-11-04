@@ -89,7 +89,7 @@ Architecture
 TechFix combines a browser-based frontend, an Express API, Gemini-based reasoning and tool selection, a controlled diagnostic/recovery layer, and Neon PostgreSQL for persistent records.
 
 flowchart TB
-    U[User] --> UI[Frontend<br/>HTML · CSS · JavaScript]
+    U[User] --> UI[Frontend<br/>HTML · CSS · JavaScript     
     UI --> API[Node.js + Express API<br/>server.js]
     API --> AG[Autonomous agent<br/>planning · tool calls · analysis]
     AG <--> GM[Google Gemini API]
